@@ -49,7 +49,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	http.authorizeRequests().antMatchers("/**").hasAnyAuthority("ROLE_USER");
 	http.authorizeRequests().anyRequest().authenticated();
 	http.addFilter(jwtRequestFilter);
-	http.addFilterBefore(new AppRequestFilter(), UsernamePasswordAuthenticationFilter.class);
+	http.addFilterBefore(new AppRequestFilter(jwtSecret), UsernamePasswordAuthenticationFilter.class);
 
     }
 
