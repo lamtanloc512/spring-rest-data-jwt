@@ -11,6 +11,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,58 +25,54 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AppRequestFilter extends OncePerRequestFilter {
 
-	@Override
-	protected void doFilterInternal(HttpServletRequest request,
-			HttpServletResponse response, FilterChain filterChain)
-			throws ServletException, IOException {
+    @Value("${jwt.secret.key}")
+    protected String jwtSecret;
 
-		if (request.getServletPath().equals("/api/login")) {
-			filterChain.doFilter(request, response);
-		} else {
-			String authorizationHeader = request.getHeader("Authorization");
-			if (authorizationHeader != null
-					&& authorizationHeader.startsWith("Bearer ")) {
-				try {
-					String token = authorizationHeader
-							.substring("Bearer ".length());
-					Algorithm algorithm = Algorithm
-							.HMAC256("thisIsSecretKey210127052205".getBytes());
-					JWTVerifier verifier = JWT.require(algorithm).build();
-					DecodedJWT decodedJWT = verifier.verify(token);
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+	    throws ServletException, IOException {
 
-					String username = decodedJWT.getSubject();
-					String[] roles = decodedJWT.getClaim("roles")
-							.asArray(String.class);
+	if (request.getServletPath().equals("/api/login")) {
+	    filterChain.doFilter(request, response);
+	} else {
+	    String authorizationHeader = request.getHeader("Authorization");
+	    if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+		try {
+		    String token = authorizationHeader.substring("Bearer ".length());
+		    Algorithm algorithm = Algorithm.HMAC256(jwtSecret.getBytes());
+		    JWTVerifier verifier = JWT.require(algorithm).build();
+		    DecodedJWT decodedJWT = verifier.verify(token);
 
-					Collection<SimpleGrantedAuthority> authorities = new ArrayList<SimpleGrantedAuthority>();
+		    String username = decodedJWT.getSubject();
+		    String[] roles = decodedJWT.getClaim("roles").asArray(String.class);
 
-					for (String role : roles) {
-						authorities.add(new SimpleGrantedAuthority(role));
-					}
+		    Collection<SimpleGrantedAuthority> authorities = new ArrayList<SimpleGrantedAuthority>();
 
-					UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-							username, null, authorities);
+		    for (String role : roles) {
+			authorities.add(new SimpleGrantedAuthority(role));
+		    }
 
-					SecurityContextHolder.getContext()
-							.setAuthentication(authenticationToken);
-					filterChain.doFilter(request, response);
+		    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+			    username, null, authorities);
 
-				} catch (Exception e) {
-					response.setHeader("error", e.getMessage());
-					response.setStatus(500);
+		    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+		    filterChain.doFilter(request, response);
 
-					// tạo map để đẩy token ra fe cho đẹp
-					Map<String, String> error = new HashMap<String, String>();
-					error.put("error_message", e.getMessage());
-					response.setContentType("application/json");
+		} catch (Exception e) {
+		    response.setHeader("error", e.getMessage());
+		    response.setStatus(500);
 
-					new ObjectMapper().writeValue(response.getOutputStream(),
-							error);
-				}
-			} else {
-				filterChain.doFilter(request, response);
-			}
+		    // tạo map để đẩy token ra fe cho đẹp
+		    Map<String, String> error = new HashMap<String, String>();
+		    error.put("error_message", e.getMessage());
+		    response.setContentType("application/json");
+
+		    new ObjectMapper().writeValue(response.getOutputStream(), error);
 		}
+	    } else {
+		filterChain.doFilter(request, response);
+	    }
 	}
+    }
 
 }

@@ -16,33 +16,24 @@ import com.devcamp.utils.UserPrincipal;
 
 @Service
 public class AppUserServiceImpl implements IAppUserService {
-	@Autowired
-	private AppUserRepo appUserRepo;
+    @Autowired
+    private AppUserRepo appUserRepo;
 
-	@Override
-	public AppUser saveUser(AppUser user) {
-		return appUserRepo.save(user);
+    @Override
+    public AppUser saveUser(AppUser user) {
+	return appUserRepo.save(user);
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+	var _userExist = appUserRepo.findByUsername(username);
+	Collection<SimpleGrantedAuthority> authories = new ArrayList<>();
+	if (_userExist == null) {
+	    throw new UsernameNotFoundException("Username not found");
+	} else {
+	    _userExist.getRole().forEach(role -> authories.add(new SimpleGrantedAuthority(role.getName())));
 	}
-
-	@Override
-	public UserDetails loadUserByUsername(String username)
-			throws UsernameNotFoundException {
-		var _userExist = appUserRepo.findByUsername(username);
-		if (_userExist.isPresent()) {
-			var password = _userExist.get().getPassword();
-			Collection<SimpleGrantedAuthority> authories = new ArrayList<>();
-
-			_userExist.get().getRole().forEach(role -> authories
-					.add(new SimpleGrantedAuthority(role.getName())));
-
-			UserPrincipal user = new UserPrincipal(username, password,
-					authories);
-			return user;
-		} else {
-			throw new UsernameNotFoundException(
-					"Cannot find user with username: " + username);
-		}
-
-	}
+	return new UserPrincipal(_userExist.getUsername(), _userExist.getPassword(), authories);
+    }
 
 }
