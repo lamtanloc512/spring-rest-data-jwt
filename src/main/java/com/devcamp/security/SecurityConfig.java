@@ -30,26 +30,26 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Bean
     @Override
     public AuthenticationManager authenticationManagerBean() throws Exception {
-	return super.authenticationManagerBean();
+        return super.authenticationManagerBean();
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-	auth.userDetailsService(userDetailsService).passwordEncoder(bCryptPasswordEncoder);
+        auth.userDetailsService(userDetailsService).passwordEncoder(bCryptPasswordEncoder);
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-	JwtRequestFilter jwtRequestFilter = new JwtRequestFilter(authenticationManagerBean(), jwtSecret);
+        JwtRequestFilter jwtRequestFilter = new JwtRequestFilter(authenticationManagerBean(), jwtSecret);
 
-	http.cors();
-	http.csrf().disable();
-	http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-	http.authorizeRequests().antMatchers("/login").permitAll();
-	http.authorizeRequests().antMatchers("/**").hasAnyAuthority("ROLE_USER");
-	http.authorizeRequests().anyRequest().authenticated();
-	http.addFilter(jwtRequestFilter);
-	http.addFilterBefore(new AppRequestFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.cors();
+        http.csrf().disable();
+        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+        http.authorizeRequests().antMatchers("/login").permitAll();
+        http.authorizeRequests().antMatchers("/**").hasAnyAuthority("ROLE_USER");
+        http.authorizeRequests().anyRequest().authenticated();
+        http.addFilter(jwtRequestFilter);
+        http.addFilterBefore(new AppRequestFilter(jwtSecret), UsernamePasswordAuthenticationFilter.class);
 
     }
 
